@@ -57,9 +57,7 @@ impl<'de> Deserializer<'de> {
 
     #[inline]
     fn read_byte(&mut self) -> Result<u8> {
-        let &b = self
-            .input.first()
-            .ok_or(Error::UnexpectedEndOfInput)?;
+        let &b = self.input.first().ok_or(Error::UnexpectedEndOfInput)?;
         self.input = &self.input[1..];
         Ok(b)
     }

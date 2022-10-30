@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq, Eq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Foo {
     #[prost(uint64, tag="1")]
     pub id: u64,
@@ -48,4 +48,17 @@ pub enum Enum {
     Apples = 0,
     Pears = 1,
     Bananas = 2,
+}
+impl Enum {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Enum::Apples => "Apples",
+            Enum::Pears => "Pears",
+            Enum::Bananas => "Bananas",
+        }
+    }
 }

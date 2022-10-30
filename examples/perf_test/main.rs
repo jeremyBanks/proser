@@ -3,6 +3,7 @@ use std::time::Instant;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
+use std::path::Path;
 
 fn test_ser_de<T: Serialize + DeserializeOwned>(
     value: &T,
@@ -114,7 +115,13 @@ mod protobench {
 }
 
 fn main() {
-    // // prost_build::compile_protos(&["monster.proto"], &["."]).unwrap();
+    let file = Path::new(&file!());
+    let file = file.canonicalize().unwrap();
+    let dir = file.parent().unwrap();
+    let protoc = dir.parent().unwrap().parent().unwrap().join("protoc");
+    std::env::set_var("OUT_DIR", dir);
+    std::env::set_var("PROTOC", protoc);
+    prost_build::compile_protos(&["monster.proto"], &["examples/perf_test"]).unwrap();
 
     test_ser_de(&42i32, "the simplest int", |v| assert_eq!(*v, 42));
 
