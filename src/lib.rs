@@ -1,3 +1,8 @@
+#![warn(unsafe_code)]
+#![forbid(unsafe_op_in_unsafe_fn)]
+#![warn(missing_docs, unused_crate_dependencies)]
+#![cfg_attr(debug_assertions, allow(unused_imports, unused_crate_dependencies))]
+
 //! The proser crate delivers a simple binary serialization strategy for the
 //! serde framework. Wire format resembles protobufs, but doesn't have field
 //! tags. Note that evolution depends on lexical field ordering; you can *never*

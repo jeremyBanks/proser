@@ -3,27 +3,22 @@ use std::io::Write;
 use crate::error::Error;
 use crate::error::Result;
 
-// A tag byte has the wire type in the low 3 bits. If the wire type is a varint
-// (Int, Sequence, Bytes, Variant), then it additionally has 4 bits of value,
-// and a stop bit as bit 7.
-
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WireType {
-    Int = 0, // varint, up to 128 bits of data
-    Fixed32 = 1,
-    Fixed64 = 2,
-    Sequence = 3, // varint length followed by this many encoded items
-    Bytes = 4,    // varint length, followed by u8 data
-    Variant = 5,  /* varint discriminator, followed by single item; for Option it's 0 (None) or
-                   * 1 (Some) */
-    _Reserved1 = 6,
-    _Reserved2 = 7,
+    Flex64 = 0b_000,
+    Flex64Length = 0b_010,
+    Fixed32 = 0b_101,
+    Fixed64 = 0b_001,
+    _3 = 0b_011,
+    _4 = 0b_100,
+    _6 = 0b_110,
+    _7 = 0b_111,
 }
 
 #[inline]
 pub fn read_wiretype(tagbyte: u8) -> WireType {
-    let tag = tagbyte & 7;
+    let tag = tagbyte & 0b_111;
     // safety: this is safe because every value from 0 to 7 is a valid wire type
     unsafe { std::mem::transmute(tag) }
 }
@@ -46,14 +41,14 @@ pub fn write_varint(writer: &mut impl Write, tag: WireType, mut value: u64) -> R
         let partial = (value & 0x7f) as u8;
         value >>= 7;
         if value == 0 {
-            // safety: we've calculcated that the local array can support the value
+            // safety: we've calculated that the local array can support the value
             unsafe {
                 *b.get_unchecked_mut(len) = partial;
             }
             len += 1;
             break;
         }
-        // safety: we've calculcated that the local array can support the value
+        // safety: we've calculated that the local array can support the value
         unsafe {
             *b.get_unchecked_mut(len) = partial | 0x80;
         }
@@ -112,12 +107,12 @@ pub fn skip_varint(tagbyte: u8, data: &[u8]) -> Result<usize> {
 fn test_varint() {
     let mut buf = vec![];
 
-    write_varint(&mut buf, WireType::Int, 15).unwrap();
+    write_varint(&mut buf, WireType::Flex64, 15).unwrap();
     assert_eq!(buf.len(), 1);
     assert_eq!(read_varint(buf[0], &buf[1..]).unwrap(), (15, 0));
 
     buf.clear();
-    write_varint(&mut buf, WireType::Int, u64::MAX).unwrap();
+    write_varint(&mut buf, WireType::Flex64, u64::MAX).unwrap();
     assert_eq!(buf.len(), 10);
     assert_eq!(read_varint(buf[0], &buf[1..]).unwrap(), (u64::MAX, 9));
 }
@@ -179,7 +174,7 @@ serde::serde_if_integer128! {
     fn test_varint_128() {
         let mut buf = vec![];
 
-        write_varint_128(&mut buf, WireType::Int, u128::MAX).unwrap();
+        write_varint_128(&mut buf, WireType::Flex64, u128::MAX).unwrap();
         assert_eq!(buf.len(), 19);
         assert_eq!(read_varint_128(buf[0], &buf[1..]).unwrap(), (u128::MAX, 18));
     }

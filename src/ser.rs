@@ -66,7 +66,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
 
     #[inline]
     fn serialize_u64(self, v: u64) -> Result<()> {
-        wire::write_varint(self.writer, WireType::Int, v)
+        wire::write_varint(self.writer, WireType::Flex64, v)
     }
 
     #[inline]
@@ -82,7 +82,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
 
         #[inline]
         fn serialize_u128(self, v: u128) -> Result<()> {
-            wire::write_varint_128(self.writer, WireType::Int, v)
+            wire::write_varint_128(self.writer, WireType::Flex64, v)
         }
     }
 
@@ -116,7 +116,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
 
     #[inline]
     fn serialize_bytes(self, v: &[u8]) -> Result<()> {
-        wire::write_varint(self.writer, WireType::Bytes, v.len() as u64)?;
+        wire::write_varint(self.writer, WireType::Flex64Length, v.len() as u64)?;
         self.writer.write_all(v)?;
         Ok(())
     }
@@ -148,7 +148,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
         variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        wire::write_varint(self.writer, WireType::Variant, variant_index as u64)?;
+        wire::write_varint(self.writer, WireType::Flex64, variant_index as u64)?;
         self.serialize_unit()
     }
 
@@ -169,7 +169,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
         _variant: &'static str,
         value: &T,
     ) -> Result<()> {
-        wire::write_varint(self.writer, WireType::Variant, variant_index as u64)?;
+        wire::write_varint(self.writer, WireType::Flex64, variant_index as u64)?;
         value.serialize(self)
     }
 
@@ -183,7 +183,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
 
     #[inline]
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
-        wire::write_varint(self.writer, WireType::Sequence, len as u64)?;
+        wire::write_varint(self.writer, WireType::Flex64Length, len as u64)?;
         Ok(self)
     }
 
@@ -210,7 +210,7 @@ impl<'a, W: Write + 'a> ser::Serializer for Serializer<'a, W> {
         _variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        wire::write_varint(self.writer, WireType::Variant, variant_index as u64)?;
+        wire::write_varint(self.writer, WireType::Flex64, variant_index as u64)?;
         self.serialize_tuple(len)
     }
 

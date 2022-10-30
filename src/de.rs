@@ -86,7 +86,7 @@ impl<'de> Deserializer<'de> {
     fn skip(&mut self) -> Result<()> {
         let tagbyte = self.read_byte()?;
         match wire::read_wiretype(tagbyte) {
-            WireType::Int => {
+            WireType::Flex64 => {
                 let len = wire::skip_varint(tagbyte, self.input)?;
                 self.consume(len);
             }
@@ -96,17 +96,17 @@ impl<'de> Deserializer<'de> {
             WireType::Fixed64 => {
                 self.read_64()?;
             }
-            WireType::Sequence => {
+            WireType::Flex64Length => {
                 let len = self.read_varint(tagbyte)?;
                 for _ in 0..len {
                     self.skip()?;
                 }
             }
-            WireType::Bytes => {
+            WireType::Flex64Length => {
                 let len = self.read_varint(tagbyte)?;
                 self.read(len as usize)?;
             }
-            WireType::Variant => {
+            WireType::Flex64Length => {
                 self.read_varint(tagbyte)?;
                 self.skip()?;
             }
@@ -128,7 +128,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_i8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Int {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64 {
             return Err(Error::UnexpectedWireType);
         }
         let v: i8 = wire::zigzag_decode(self.read_varint(tagbyte)?).try_into()?;
@@ -138,7 +138,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_i16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Int {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64 {
             return Err(Error::UnexpectedWireType);
         }
         let v: i16 = wire::zigzag_decode(self.read_varint(tagbyte)?).try_into()?;
@@ -152,7 +152,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         // as a varint (e.g. a hash value or other semi-random ID).
         let tagbyte = self.read_byte()?;
         let v: i32 = match wire::read_wiretype(tagbyte) {
-            WireType::Int => wire::zigzag_decode(self.read_varint(tagbyte)?).try_into()?,
+            WireType::Flex64 => wire::zigzag_decode(self.read_varint(tagbyte)?).try_into()?,
             WireType::Fixed32 => i32::from_le_bytes(self.read_32()?),
             _ => return Err(Error::UnexpectedWireType),
         };
@@ -163,7 +163,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_i64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
         let v: i64 = match wire::read_wiretype(tagbyte) {
-            WireType::Int => wire::zigzag_decode(self.read_varint(tagbyte)?),
+            WireType::Flex64 => wire::zigzag_decode(self.read_varint(tagbyte)?),
             WireType::Fixed64 => i64::from_le_bytes(self.read_64()?),
             _ => return Err(Error::UnexpectedWireType),
         };
@@ -173,7 +173,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_u8<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Int {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64 {
             return Err(Error::UnexpectedWireType);
         }
         let v: u8 = self.read_varint(tagbyte)?.try_into()?;
@@ -183,7 +183,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_u16<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Int {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64 {
             return Err(Error::UnexpectedWireType);
         }
         let v: u16 = self.read_varint(tagbyte)?.try_into()?;
@@ -194,7 +194,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_u32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
         let v: u32 = match wire::read_wiretype(tagbyte) {
-            WireType::Int => self.read_varint(tagbyte)?.try_into()?,
+            WireType::Flex64 => self.read_varint(tagbyte)?.try_into()?,
             WireType::Fixed32 => u32::from_le_bytes(self.read_32()?),
             _ => return Err(Error::UnexpectedWireType),
         };
@@ -205,7 +205,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     fn deserialize_u64<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
         let v: u64 = match wire::read_wiretype(tagbyte) {
-            WireType::Int => self.read_varint(tagbyte)?,
+            WireType::Flex64 => self.read_varint(tagbyte)?,
             WireType::Fixed64 => u64::from_le_bytes(self.read_64()?),
             _ => return Err(Error::UnexpectedWireType),
         };
@@ -244,7 +244,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         #[inline]
         fn deserialize_i128<V:Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
             let tagbyte = self.read_byte()?;
-            if wire::read_wiretype(tagbyte) != WireType::Int {
+            if wire::read_wiretype(tagbyte) != WireType::Flex64 {
                 return Err(Error::UnexpectedWireType);
             }
             let v  = wire::zigzag_decode_128(self.read_varint_128(tagbyte)?);
@@ -254,7 +254,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
         #[inline]
         fn deserialize_u128<V:Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
             let tagbyte = self.read_byte()?;
-            if wire::read_wiretype(tagbyte) != WireType::Int {
+            if wire::read_wiretype(tagbyte) != WireType::Flex64 {
                 return Err(Error::UnexpectedWireType);
             }
             let v  = self.read_varint_128(tagbyte)?;
@@ -284,7 +284,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_bytes<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Bytes {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType);
         }
         let len = self.read_varint(tagbyte)?;
@@ -300,7 +300,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_option<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Variant {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType);
         }
         let b = self.read_varint(tagbyte)?;
@@ -340,7 +340,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_seq<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Sequence {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType);
         }
         let n = self.read_varint(tagbyte)? as usize;
@@ -354,7 +354,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_tuple<V: Visitor<'de>>(self, len: usize, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Sequence {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType);
         }
         let n = self.read_varint(tagbyte)? as usize;
@@ -378,7 +378,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     #[inline]
     fn deserialize_map<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Sequence {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType);
         }
         let n = self.read_varint(tagbyte)? as usize;
@@ -435,7 +435,7 @@ impl<'de, 'a> EnumAccess<'de> for &'a mut Deserializer<'de> {
         // we want to read a u32, but with a different wire type, so can't simply use
         // deserializer -- read the discriminant then force it into a deserializer
         let tagbyte = self.read_byte()?;
-        if wire::read_wiretype(tagbyte) != WireType::Variant {
+        if wire::read_wiretype(tagbyte) != WireType::Flex64Length {
             return Err(Error::UnexpectedWireType)?;
         }
         let discr: u32 = self.read_varint(tagbyte)?.try_into()?;
